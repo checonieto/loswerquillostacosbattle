@@ -1,1 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Los Werquillos Taco Battle</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Cinzel:wght@700;900&display=swap');
 
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background: #0d0303;
+            color: #fff;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow-x: hidden;
+        }
+
+        .cinzel {
+            font-family: 'Cinzel', serif;
+        }
+
+        .arcade-box {
+            box-shadow: 0 0 30px rgba(255, 69, 0, 0.4), inset 0 0 20px rgba(212, 175, 55, 0.2);
+            border: 4px solid #d4af37;
+        }
+
+        .btn-glow {
+            background: linear-gradient(135deg, #e63946 0%, #d62828 50%, #9e0059 100%);
+            box-shadow: 0 4px 15px rgba(230, 57, 70, 0.5);
+            transition: all 0.2s ease;
+        }
+
+        .btn-glow:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 6px 20px rgba(230, 57, 70, 0.8);
+        }
+
+        .btn-glow:active {
+            transform: translateY(1px);
+        }
+
+        .modal-backdrop {
+            background: rgba(10, 3, 3, 0.92);
+            backdrop-filter: blur(8px);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #2e0d0d 0%, #140404 70%, #050000 100%);
+        }
+
+        /* Custom scrollbar for rules modal */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.3);
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #d4af37;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-2 sm:p-4">
+
+    <!-- Header Banner -->
+    <header class="w-full max-w-4xl text-center mb-2 flex flex-col items-center">
+        <div class="relative w-full py-2.5 px-4 rounded-2xl bg-gradient-to-r from-red-950 via-yellow-950 to-red-950 border-2 border-yellow-500 shadow-xl flex items-center justify-between">
+            
+            <!-- Branding -->
+            <div class="flex items-center gap-2">
+                <span class="text-3xl sm:text-4xl animate-bounce">🌮</span>
+                <div class="text-left hidden sm:block">
+                    <h1 class="text-xl sm:text-2xl font-black text-yellow-400 cinzel tracking-wider drop-shadow">LOS WERQUILLOS</h1>
+                    <p class="text-[10px] sm:text-xs text-red-300 font-sans tracking-widest uppercase">Mexican Food & Snacks</p>
+                </div>
+            </div>
+
+            <!-- Arcade Title & Audio Control -->
+            <div class="text-center flex flex-col items-center">
+                <span class="text-[10px] sm:text-xs uppercase text-yellow-300/90 tracking-widest font-bold">ARCADE SHOWDOWN</span>
+                <span id="header-title" class="text-base sm:text-2xl font-black text-red-400 tracking-wide cinzel">TACO BATTLE</span>
+            </div>
+
+            <!-- Header Action Buttons -->
+            <div class="flex items-center gap-2">
+                <button id="btn-sound-toggle" class="p-2 bg-yellow-900/60 hover:bg-yellow-800 border border-yellow-500/60 text-yellow-300 rounded-xl transition text-sm sm:text-base" title="Toggle Sound">
+                    🔊
+                </button>
+                <button id="btn-rules-header" class="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-400 text-black font-extrabold text-xs sm:text-sm rounded-xl shadow-md transition flex items-center gap-1">
+                    📜 Rules
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Game Container -->
+    <main class="relative w-full max-w-4xl aspect-[4/3] max-h-[75vh] arcade-box rounded-2xl overflow-hidden bg-black flex flex-col">
+        
+        <!-- Canvas Game Screen -->
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+        <!-- In-Game Rules Floating Button (Always Accessible) -->
+        <button id="btn-ingame-rules" class="absolute top-14 right-3 z-10 px-3 py-1.5 bg-black/70 hover:bg-black/90 border border-yellow-500/80 text-yellow-400 font-bold text-xs sm:text-sm rounded-xl backdrop-blur transition flex items-center gap-1 shadow-lg">
+            📜 How To Win
+        </button>
+
+        <!-- On-Screen Controls for Mobile/Touch -->
+        <div class="absolute bottom-2 left-2 right-2 flex justify-between items-center pointer-events-none md:hidden px-2 z-10">
+            <div class="flex gap-2 pointer-events-auto">
+                <button id="btn-left" class="w-14 h-14 bg-red-900/80 active:bg-red-600 text-white font-bold text-2xl rounded-full border-2 border-yellow-500 shadow-lg flex items-center justify-center">◀</button>
+                <button id="btn-right" class="w-14 h-14 bg-red-900/80 active:bg-red-600 text-white font-bold text-2xl rounded-full border-2 border-yellow-500 shadow-lg flex items-center justify-center">▶</button>
+            </div>
+            <button id="btn-fire" class="pointer-events-auto px-6 h-14 bg-yellow-500 active:bg-yellow-400 text-black font-black text-xl rounded-full border-2 border-red-600 shadow-xl flex items-center justify-center gap-1">
+                🌮 FIRE
+            </button>
+        </div>
+
+        <!-- Rules & How To Win Modal Overlay -->
+        <div id="rules-modal" class="hidden absolute inset-0 modal-backdrop z-40 flex flex-col items-center justify-center p-3 sm:p-6 text-center">
+            <div class="bg-gradient-to-b from-red-950 via-neutral-900 to-black border-2 border-yellow-500 p-5 sm:p-6 rounded-2xl max-w-lg w-full shadow-2xl relative flex flex-col max-h-[90%]">
+                
+                <h2 class="text-2xl sm:text-3xl font-black text-yellow-400 cinzel mb-1 flex items-center justify-center gap-2">
+                    📜 HOW TO PLAY & WIN
+                </h2>
+                <p class="text-xs text-red-300 uppercase tracking-widest mb-3 font-semibold">Los Werquillos Taco Battle Rules</p>
+                
+                <!-- Rules Content Container -->
+                <div class="overflow-y-auto custom-scroll text-left text-xs sm:text-sm space-y-3 pr-2 my-2 bg-black/50 p-3 sm:p-4 rounded-xl border border-red-900/60">
+                    
+                    <!-- Defeat Condition -->
+                    <div class="p-2.5 bg-red-950/60 rounded-lg border border-red-800/80 flex items-start gap-2.5">
+                        <span class="text-2xl">💔</span>
+                        <div>
+                            <strong class="text-red-400 text-sm block">Lives & Game Over:</strong>
+                            You start with <span class="text-yellow-400 font-bold">3 Hearts (Lives)</span>. Each time a food item passes your logo and reaches the bottom (or hits your logo / boss attacks), you lose 1 Heart. Lose all 3 Hearts = <span class="text-red-400 font-bold">GAME OVER!</span>
+                        </div>
+                    </div>
+
+                    <!-- Round 1 -->
+                    <div class="p-2.5 bg-yellow-950/40 rounded-lg border border-yellow-700/50 flex items-start gap-2.5">
+                        <span class="text-2xl">⚔️</span>
+                        <div>
+                            <strong class="text-yellow-400 text-sm block">Round 1: Street Food Rush</strong>
+                            Destroy <span class="text-green-400 font-black">15 enemy foods</span> (Burgers 🍔, Pizza 🍕, Hotdogs 🌭) to clear Round 1!
+                        </div>
+                    </div>
+
+                    <!-- Round 2 -->
+                    <div class="p-2.5 bg-orange-950/40 rounded-lg border border-orange-700/50 flex items-start gap-2.5">
+                        <span class="text-2xl">🔥</span>
+                        <div>
+                            <strong class="text-orange-400 text-sm block">Round 2: Fast Food Invasion</strong>
+                            Destroy <span class="text-green-400 font-black">25 enemy foods</span> (Broccoli 🥦, Donuts 🍩, Heavy Burgers 🍔) to clear Round 2!
+                        </div>
+                    </div>
+
+                    <!-- Round 3 -->
+                    <div class="p-2.5 bg-purple-950/40 rounded-lg border border-purple-700/50 flex items-start gap-2.5">
+                        <span class="text-2xl">👑</span>
+                        <div>
+                            <strong class="text-purple-300 text-sm block">Round 3: El Mega Burger Boss Battle</strong>
+                            Defeat <span class="text-yellow-400 font-black">El Mega Burger Boss 🍔👑</span>! Reduce his health bar from <span class="text-red-400 font-bold">100 HP to 0 HP</span> while dodging toxic grease attacks to <span class="text-green-400 font-black">WIN THE GAME!</span>
+                        </div>
+                    </div>
+
+                    <!-- Controls Summary -->
+                    <div class="p-2 bg-neutral-900 rounded-lg border border-neutral-700 text-gray-300 text-center text-xs">
+                        🎮 <strong>Controls:</strong> Arrow Keys / A-D to Move | Spacebar to Shoot Tacos 🌮 | Catch ⚡ for Triple Shot Powerup!
+                    </div>
+                </div>
+
+                <!-- Close Modal Button -->
+                <button id="btn-close-rules" class="mt-2 w-full py-2.5 sm:py-3 btn-glow text-white font-extrabold text-base sm:text-lg rounded-xl shadow-lg border border-yellow-400/40">
+                    Got It! Back to Game 🌮
+                </button>
+            </div>
+        </div>
+
+        <!-- Start Game Overlay Screen -->
+        <div id="start-overlay" class="absolute inset-0 modal-backdrop z-30 flex flex-col items-center justify-center p-6 text-center">
+            
+            <!-- Logo Header -->
+            <div class="mb-3 transform hover:scale-105 transition duration-300">
+                <svg width="220" height="85" viewBox="0 0 220 85" class="drop-shadow-[0_0_15px_rgba(234,179,8,0.6)]">
+                    <rect x="5" y="5" width="210" height="75" rx="15" fill="#3a0606" stroke="#d4af37" stroke-width="4"/>
+                    <rect x="9" y="9" width="202" height="67" rx="12" fill="none" stroke="#dc2626" stroke-width="2"/>
+                    <text x="110" y="38" font-family="'Cinzel', serif" font-weight="bold" font-size="19" fill="#facc15" text-anchor="middle">LOS WERQUILLOS</text>
+                    <text x="110" y="55" font-family="sans-serif" font-size="9" fill="#4ade80" text-anchor="middle" letter-spacing="2">MEXICAN FOOD & SNACKS</text>
+                    <text x="110" y="70" font-size="12" text-anchor="middle">🌶️ 🇲🇽 🌶️</text>
+                </svg>
+            </div>
+
+            <h1 class="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-red-500 to-yellow-400 cinzel mb-2 tracking-wide drop-shadow">
+                TACO BATTLE
+            </h1>
+            
+            <!-- Quick Rules Brief -->
+            <div class="bg-black/60 border border-yellow-500/40 p-3 rounded-xl max-w-sm mb-5 text-xs sm:text-sm text-yellow-200/90 text-left space-y-1">
+                <p>🏆 <strong>Round 1:</strong> Kill 15 Foods</p>
+                <p>🏆 <strong>Round 2:</strong> Kill 25 Foods</p>
+                <p>👑 <strong>Round 3:</strong> Defeat El Mega Burger Boss (100 HP)</p>
+                <p class="text-red-400 font-semibold">💔 3 Hearts Max — Don't let foods reach the bottom!</p>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
+                <button id="btn-start" class="flex-1 py-3.5 btn-glow text-yellow-300 font-black text-xl rounded-xl border-2 border-yellow-400 shadow-2xl flex items-center justify-center gap-2">
+                    <span>🚀 START BATTLE</span>
+                </button>
+                <button id="btn-rules-start" class="px-4 py-3.5 bg-yellow-600/80 hover:bg-yellow-500 text-black font-bold text-base rounded-xl border border-yellow-400 shadow-lg">
+                    📜 Rules
+                </button>
+            </div>
+        </div>
+
+        <!-- Level Transition Overlay Screen -->
+        <div id="level-overlay" class="hidden absolute inset-0 modal-backdrop z-30 flex flex-col items-center justify-center p-6 text-center">
+            <span id="level-icon" class="text-6xl mb-2 animate-bounce">⚔️</span>
+            <h2 id="level-title" class="text-3xl sm:text-4xl font-black text-yellow-400 cinzel mb-1">ROUND 1</h2>
+            <p id="level-desc" class="text-sm sm:text-base text-gray-200 mb-4 max-w-md">Fast Food Attack!</p>
+            
+            <div id="level-goal-box" class="bg-yellow-950/60 border border-yellow-500/60 p-3 rounded-xl mb-6 text-yellow-300 font-bold text-sm max-w-xs">
+                Goal: Destroy 15 enemy foods!
+            </div>
+
+            <button id="btn-next-round" class="px-8 py-3.5 btn-glow text-white font-black text-xl rounded-xl border border-yellow-400 shadow-xl">
+                Begin Round 🔥
+            </button>
+        </div>
+
+        <!-- Game Over Overlay Screen -->
+        <div id="gameover-overlay" class="hidden absolute inset-0 modal-backdrop z-30 flex flex-col items-center justify-center p-6 text-center">
+            <span class="text-6xl mb-2">💔 💥</span>
+            <h2 class="text-4xl font-black text-red-500 cinzel mb-1">GAME OVER</h2>
+            <p id="gameover-reason" class="text-red-300 text-sm mb-4">You ran out of hearts!</p>
+            
+            <div class="bg-black/70 p-4 rounded-xl border border-red-900/70 mb-6 w-full max-w-xs text-left text-sm">
+                <div class="flex justify-between py-1 text-gray-300">
+                    <span>Round Reached:</span>
+                    <span id="go-round" class="font-bold text-yellow-400">Round 1</span>
+                </div>
+                <div class="flex justify-between py-1 text-gray-300">
+                    <span>Final Score:</span>
+                    <span id="go-score" class="font-bold text-yellow-400">0</span>
+                </div>
+            </div>
+
+            <button id="btn-restart" class="px-8 py-3.5 btn-glow text-white font-black text-xl rounded-xl border border-yellow-400 shadow-xl">
+                🔄 Try Again
+            </button>
+        </div>
+
+        <!-- Victory Overlay Screen -->
+        <div id="victory-overlay" class="hidden absolute inset-0 modal-backdrop z-30 flex flex-col items-center justify-center p-6 text-center">
+            <span class="text-6xl mb-2 animate-bounce">🏆 🎉</span>
+            <h2 class="text-3xl sm:text-5xl font-black text-yellow-400 cinzel mb-1 drop-shadow-[0_0_15px_rgba(250,204,21,0.9)]">
+                VICTORY!
+            </h2>
+            <p class="text-base sm:text-lg text-green-300 mb-1 font-bold">You Destroyed El Mega Burger Boss!</p>
+            <p class="text-xs sm:text-sm text-yellow-200/80 mb-5">Los Werquillos rules the food universe!</p>
+
+            <div class="bg-black/70 p-4 rounded-xl border border-yellow-500/60 mb-6 w-full max-w-xs text-left text-sm">
+                <div class="flex justify-between py-1 text-gray-300">
+                    <span>Total Score:</span>
+                    <span id="vic-score" class="font-bold text-yellow-400 text-base">0</span>
+                </div>
+                <div class="flex justify-between py-1 text-gray-300">
+                    <span>Champion Title:</span>
+                    <span class="font-bold text-green-400">Master Taco Warrior 🌮</span>
+                </div>
+            </div>
+
+            <button id="btn-play-again" class="px-8 py-3.5 btn-glow text-white font-black text-xl rounded-xl border border-yellow-400 shadow-xl">
+                🌮 Play Again
+            </button>
+        </div>
+    </main>
+
+    <!-- Footer Controls & Copyright -->
+    <footer class="w-full max-w-4xl mt-2 text-center text-xs text-yellow-500/80 flex flex-col sm:flex-row items-center justify-between gap-2 px-2">
+        <div>
+            🎮 <strong>Controls:</strong> Left/Right Arrow Keys or A/D = Move | Spacebar = Fire Tacos 🌮
+        </div>
+        <div class="text-gray-400">
+            Los Werquillos Taco Battle &copy; 2026
+        </div>
+    </footer>
+
+    <script>
+        // --- Web Audio API Synthesizer with Mute Toggle ---
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+        let soundMuted = false;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new AudioCtx();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playSound(type) {
+            if (soundMuted || !audioCtx) return;
+            try {
+                const now = audioCtx.currentTime;
+
+                if (type === 'shoot') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(650, now);
+                    osc.frequency.exponentialRampToValueAtTime(140, now + 0.08);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'hit') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(200, now);
+                    osc.frequency.exponentialRampToValueAtTime(40, now + 0.12);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+                    osc.start(now);
+                    osc.stop(now + 0.12);
+                } else if (type === 'boss_hit') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(120, now);
+                    osc.frequency.exponentialRampToValueAtTime(30, now + 0.15);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (type === 'miss') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, now);
+                    osc.frequency.linearRampToValueAtTime(50, now + 0.25);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'powerup') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(350, now);
+                    osc.frequency.exponentialRampToValueAtTime(900, now + 0.2);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                } else if (type === 'victory') {
+                    [261.63, 329.63, 392.00, 523.25, 659.25].forEach((freq, idx) => {
+                        const o = audioCtx.createOscillator();
+                        const g = audioCtx.createGain();
+                        o.connect(g);
+                        g.connect(audioCtx.destination);
+                        o.frequency.setValueAtTime(freq, now + idx * 0.1);
+                        g.gain.setValueAtTime(0.2, now + idx * 0.1);
+                        g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.35);
+                        o.start(now + idx * 0.1);
+                        o.stop(now + idx * 0.1 + 0.35);
+                    });
+                } else if (type === 'gameover') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.linearRampToValueAtTime(40, now + 0.5);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.5);
+                    osc.start(now);
+                    osc.stop(now + 0.5);
+                }
+            } catch (e) {
+                console.log("Audio play error", e);
+            }
+        }
+
+        // --- Sound Toggle Button Event ---
+        document.getElementById('btn-sound-toggle').onclick = () => {
+            initAudio();
+            soundMuted = !soundMuted;
+            document.getElementById('btn-sound-toggle').innerText = soundMuted ? '🔇' : '🔊';
+        };
+
+        // --- Canvas & Core Setup ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Optional Logo Image Object (falls back gracefully to embedded vector badge)
+        const customLogo = new Image();
+        let customLogoLoaded = false;
+        customLogo.src = 'logo.jpg';
+        customLogo.onload = () => { customLogoLoaded = true; };
+
+        // Game Configuration
+        const MAX_LIVES = 3;
+
+        // Round Configurations
+        const ROUNDS = [
+            {
+                number: 1,
+                name: "Round 1: Street Food Rush",
+                desc: "Burgers 🍔, Pizza 🍕 & Hotdogs 🌭 are attacking! Destroy 15 foods to pass.",
+                targetKills: 15,
+                enemies: [
+                    { emoji: '🍔', hp: 2, pts: 20, size: 42, speed: 2.0 },
+                    { emoji: '🍕', hp: 1, pts: 15, size: 38, speed: 2.4 },
+                    { emoji: '🌭', hp: 1, pts: 10, size: 35, speed: 2.7 }
+                ],
+                spawnInterval: 65,
+                isBossRound: false
+            },
+            {
+                number: 2,
+                name: "Round 2: Fast Food Invasion",
+                desc: "Broccoli 🥦, Donuts 🍩 & Heavy Burgers 🍔 rush down! Destroy 25 foods to pass.",
+                targetKills: 25,
+                enemies: [
+                    { emoji: '🥦', hp: 2, pts: 25, size: 36, speed: 3.0 },
+                    { emoji: '🍩', hp: 1, pts: 20, size: 34, speed: 3.5 },
+                    { emoji: '🍔', hp: 3, pts: 35, size: 45, speed: 2.2 },
+                    { emoji: '🍟', hp: 1, pts: 15, size: 32, speed: 3.8 }
+                ],
+                spawnInterval: 48,
+                isBossRound: false
+            },
+            {
+                number: 3,
+                name: "Round 3: El Mega Burger Boss Battle",
+                desc: "Defeat El Mega Burger Boss 🍔👑 (100 HP) and dodge toxic grease attacks to WIN!",
+                targetKills: 0,
+                enemies: [
+                    { emoji: '🍔', hp: 2, pts: 20, size: 40, speed: 2.5 },
+                    { emoji: '🍕', hp: 1, pts: 15, size: 36, speed: 3.0 }
+                ],
+                spawnInterval: 75,
+                isBossRound: true
+            }
+        ];
+
+        // --- Game State ---
+        let currentRoundIdx = 0;
+        let score = 0;
+        let lives = MAX_LIVES;
+        let roundKills = 0;
+        let gameState = 'START'; // 'START', 'LEVEL_TRANSITION', 'PLAYING', 'GAMEOVER', 'VICTORY'
+
+        let tacos = [];
+        let enemies = [];
+        let boss = null;
+        let bossAttacks = [];
+        let powerups = [];
+        let particles = [];
+        let spawnTimer = 0;
+        let lastShotTime = 0;
+
+        // Player Avatar
+        const player = {
+            x: canvas.width / 2 - 75,
+            y: canvas.height - 80,
+            width: 150,
+            height: 65,
+            speed: 8.5,
+            tripleShot: false,
+            powerupTimer: 0
+        };
+
+        // Key Controls State
+        const keys = {
+            left: false,
+            right: false,
+            space: false
+        };
+
+        // --- Inputs & Event Listeners ---
+        window.addEventListener('keydown', (e) => {
+            initAudio();
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+            if (e.code === 'Space') {
+                keys.space = true;
+                e.preventDefault();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+            if (e.code === 'Space') keys.space = false;
+        });
+
+        // Touch Control Listeners
+        const btnLeft = document.getElementById('btn-left');
+        const btnRight = document.getElementById('btn-right');
+        const btnFire = document.getElementById('btn-fire');
+
+        const bindTouch = (elem, keyName) => {
+            elem.addEventListener('touchstart', (e) => { e.preventDefault(); initAudio(); keys[keyName] = true; });
+            elem.addEventListener('touchend', (e) => { e.preventDefault(); keys[keyName] = false; });
+            elem.addEventListener('mousedown', () => { initAudio(); keys[keyName] = true; });
+            elem.addEventListener('mouseup', () => { keys[keyName] = false; });
+        };
+
+        bindTouch(btnLeft, 'left');
+        bindTouch(btnRight, 'right');
+        bindTouch(btnFire, 'space');
+
+        // UI Rules Modal Handlers
+        const rulesModal = document.getElementById('rules-modal');
+        const openRules = () => { initAudio(); rulesModal.classList.remove('hidden'); };
+        const closeRules = () => { rulesModal.classList.add('hidden'); };
+
+        document.getElementById('btn-rules-header').onclick = openRules;
+        document.getElementById('btn-rules-start').onclick = openRules;
+        document.getElementById('btn-ingame-rules').onclick = openRules;
+        document.getElementById('btn-close-rules').onclick = closeRules;
+
+        // Game Flow Buttons
+        document.getElementById('btn-start').onclick = () => {
+            initAudio();
+            document.getElementById('start-overlay').classList.add('hidden');
+            startRound(0);
+        };
+
+        document.getElementById('btn-next-round').onclick = () => {
+            initAudio();
+            document.getElementById('level-overlay').classList.add('hidden');
+            gameState = 'PLAYING';
+        };
+
+        document.getElementById('btn-restart').onclick = () => {
+            initAudio();
+            document.getElementById('gameover-overlay').classList.add('hidden');
+            score = 0;
+            lives = MAX_LIVES;
+            startRound(0);
+        };
+
+        document.getElementById('btn-play-again').onclick = () => {
+            initAudio();
+            document.getElementById('victory-overlay').classList.add('hidden');
+            score = 0;
+            lives = MAX_LIVES;
+            startRound(0);
+        };
+
+        // --- Round Management ---
+        function startRound(index) {
+            currentRoundIdx = index;
+            roundKills = 0;
+            tacos = [];
+            enemies = [];
+            boss = null;
+            bossAttacks = [];
+            powerups = [];
+            particles = [];
+            player.x = canvas.width / 2 - player.width / 2;
+            player.tripleShot = false;
+
+            const r = ROUNDS[currentRoundIdx];
+            document.getElementById('header-title').innerText = `ROUND ${r.number}`;
+            document.getElementById('level-title').innerText = r.name;
+            document.getElementById('level-desc').innerText = r.desc;
+            document.getElementById('level-icon').innerText = r.isBossRound ? '👑' : '⚔️';
+            
+            const goalBox = document.getElementById('level-goal-box');
+            if (r.isBossRound) {
+                goalBox.innerText = `Goal: Defeat El Mega Burger Boss (100 HP)!`;
+            } else {
+                goalBox.innerText = `Goal: Destroy ${r.targetKills} enemy foods!`;
+            }
+
+            document.getElementById('level-overlay').classList.remove('hidden');
+            gameState = 'LEVEL_TRANSITION';
+
+            if (r.isBossRound) {
+                spawnBoss();
+            }
+        }
+
+        function spawnBoss() {
+            boss = {
+                x: canvas.width / 2 - 70,
+                y: -120,
+                targetY: 60,
+                width: 140,
+                height: 120,
+                emoji: '🍔👑',
+                name: 'El Mega Burger Boss',
+                hp: 100,
+                maxHp: 100,
+                dx: 3.5,
+                attackTimer: 0
+            };
+        }
+
+        // --- Particle & Explosion Utilities ---
+        function createExplosion(x, y, emoji = null, count = 12) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    dx: (Math.random() - 0.5) * 8,
+                    dy: (Math.random() - 0.5) * 8,
+                    radius: Math.random() * 4 + 2,
+                    color: ['#ff4500', '#ffd700', '#ff0055', '#ffffff'][Math.floor(Math.random() * 4)],
+                    alpha: 1,
+                    life: 25,
+                    emoji: emoji
+                });
+            }
+        }
+
+        function createConfetti() {
+            for (let i = 0; i < 90; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height - canvas.height,
+                    dx: (Math.random() - 0.5) * 5,
+                    dy: Math.random() * 3 + 2,
+                    radius: Math.random() * 6 + 3,
+                    color: ['#facc15', '#ef4444', '#22c55e', '#3b82f6', '#ec4899'][Math.floor(Math.random() * 5)],
+                    alpha: 1,
+                    life: 200
+                });
+            }
+        }
+
+        // --- Drawing Player Avatar ---
+        function drawPlayerAvatar(x, y, w, h) {
+            if (customLogoLoaded) {
+                ctx.drawImage(customLogo, x, y, w, h);
+                return;
+            }
+
+            // High Quality Canvas Vector Badge Backup
+            ctx.save();
+            ctx.translate(x, y);
+
+            // Glow Outer Frame
+            ctx.shadowColor = '#facc15';
+            ctx.shadowBlur = 12;
+            ctx.fillStyle = '#450a0a';
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 3;
+
+            ctx.beginPath();
+            ctx.roundRect(0, 0, w, h, 12);
+            ctx.fill();
+            ctx.stroke();
+
+            // Inner Red Frame
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = '#dc2626';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(4, 4, w - 8, h - 8);
+
+            // Text Banner
+            ctx.fillStyle = '#facc15';
+            ctx.font = 'bold 13px "Cinzel", serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('LOS WERQUILLOS', w / 2, 28);
+
+            ctx.fillStyle = '#4ade80';
+            ctx.font = 'bold 7px sans-serif';
+            ctx.fillText('MEXICAN FOOD & SNACKS', w / 2, 40);
+
+            // Emojis
+            ctx.font = '12px sans-serif';
+            ctx.fillText('🌶️ 🌮 🌶️', w / 2, 56);
+
+            ctx.restore();
+        }
+
+        // --- Game Update Logic ---
+        function update(now) {
+            if (gameState !== 'PLAYING') return;
+
+            const curRound = ROUNDS[currentRoundIdx];
+
+            // Player Movement
+            if (keys.left && player.x > 5) player.x -= player.speed;
+            if (keys.right && player.x + player.width < canvas.width - 5) player.x += player.speed;
+
+            // Powerup Timer Update
+            if (player.tripleShot) {
+                player.powerupTimer--;
+                if (player.powerupTimer <= 0) player.tripleShot = false;
+            }
+
+            // Shoot Tacos 🌮
+            if (keys.space && now - lastShotTime > 160) {
+                playSound('shoot');
+                if (player.tripleShot) {
+                    tacos.push({ x: player.x + player.width / 2, y: player.y, dx: -2.5, dy: -9.5 });
+                    tacos.push({ x: player.x + player.width / 2, y: player.y, dx: 0, dy: -10 });
+                    tacos.push({ x: player.x + player.width / 2, y: player.y, dx: 2.5, dy: -9.5 });
+                } else {
+                    tacos.push({ x: player.x + player.width / 2, y: player.y, dx: 0, dy: -10 });
+                }
+                lastShotTime = now;
+            }
+
+            // Update Taco Bullets
+            for (let i = tacos.length - 1; i >= 0; i--) {
+                const t = tacos[i];
+                t.x += t.dx;
+                t.y += t.dy;
+                if (t.y < -30 || t.x < 0 || t.x > canvas.width) {
+                    tacos.splice(i, 1);
+                }
+            }
+
+            // Spawn Enemies
+            spawnTimer++;
+            if (spawnTimer >= curRound.spawnInterval) {
+                const enemyType = curRound.enemies[Math.floor(Math.random() * curRound.enemies.length)];
+                enemies.push({
+                    x: Math.random() * (canvas.width - enemyType.size - 20) + 10,
+                    y: -enemyType.size,
+                    emoji: enemyType.emoji,
+                    hp: enemyType.hp,
+                    maxHp: enemyType.hp,
+                    pts: enemyType.pts,
+                    size: enemyType.size,
+                    speed: enemyType.speed + (Math.random() * 0.4)
+                });
+                spawnTimer = 0;
+
+                // Random Triple-Shot Powerup Chance
+                if (Math.random() < 0.08) {
+                    powerups.push({
+                        x: Math.random() * (canvas.width - 40) + 20,
+                        y: -30,
+                        speed: 2.2,
+                        emoji: '⚡'
+                    });
+                }
+            }
+
+            // Update Powerups
+            for (let i = powerups.length - 1; i >= 0; i--) {
+                const p = powerups[i];
+                p.y += p.speed;
+
+                // Player Catch Powerup
+                if (p.x > player.x && p.x < player.x + player.width && p.y > player.y && p.y < player.y + player.height) {
+                    playSound('powerup');
+                    player.tripleShot = true;
+                    player.powerupTimer = 320;
+                    createExplosion(p.x, p.y, '🌮', 8);
+                    powerups.splice(i, 1);
+                    continue;
+                }
+
+                if (p.y > canvas.height + 30) powerups.splice(i, 1);
+            }
+
+            // --- Update Boss (Round 3) ---
+            if (boss) {
+                if (boss.y < boss.targetY) boss.y += 2;
+
+                boss.x += boss.dx;
+                if (boss.x < 15 || boss.x + boss.width > canvas.width - 15) {
+                    boss.dx *= -1;
+                }
+
+                // Boss Shooting Attacks (Toxic Grease Blobs)
+                boss.attackTimer++;
+                if (boss.attackTimer > 50) {
+                    bossAttacks.push({
+                        x: boss.x + boss.width / 2 + (Math.random() - 0.5) * 40,
+                        y: boss.y + boss.height,
+                        dy: 4.5,
+                        size: 22,
+                        emoji: '🛢️'
+                    });
+                    boss.attackTimer = 0;
+                }
+
+                // Check Taco Hits on Boss
+                for (let tIdx = tacos.length - 1; tIdx >= 0; tIdx--) {
+                    const t = tacos[tIdx];
+                    if (t.x > boss.x && t.x < boss.x + boss.width && t.y > boss.y && t.y < boss.y + boss.height) {
+                        boss.hp--;
+                        playSound('boss_hit');
+                        createExplosion(t.x, t.y);
+                        tacos.splice(tIdx, 1);
+
+                        if (boss.hp <= 0) {
+                            score += 1000;
+                            createExplosion(boss.x + boss.width / 2, boss.y + boss.height / 2, '💥', 35);
+                            boss = null;
+                            triggerVictory();
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // Update Boss Attacks
+            for (let aIdx = bossAttacks.length - 1; aIdx >= 0; aIdx--) {
+                const atk = bossAttacks[aIdx];
+                atk.y += atk.dy;
+
+                // Hit Player Banner
+                if (atk.x > player.x && atk.x < player.x + player.width && atk.y > player.y && atk.y < player.y + player.height) {
+                    bossAttacks.splice(aIdx, 1);
+                    lives--;
+                    playSound('miss');
+                    createExplosion(atk.x, atk.y, '💥', 12);
+
+                    if (lives <= 0) {
+                        triggerGameOver("El Mega Burger Boss overwhelmed your defense!");
+                        return;
+                    }
+                    continue;
+                }
+
+                if (atk.y > canvas.height + 30) bossAttacks.splice(aIdx, 1);
+            }
+
+            // --- Update Regular Enemies ---
+            for (let eIdx = enemies.length - 1; eIdx >= 0; eIdx--) {
+                const enemy = enemies[eIdx];
+                enemy.y += enemy.speed;
+
+                // Enemy Passed Bottom -> Lose 1 Heart!
+                if (enemy.y > canvas.height + enemy.size) {
+                    enemies.splice(eIdx, 1);
+                    lives--;
+                    playSound('miss');
+
+                    if (lives <= 0) {
+                        triggerGameOver("3 foods passed you by!");
+                        return;
+                    }
+                    continue;
+                }
+
+                // Enemy Hit Player Banner -> Lose 1 Heart!
+                if (enemy.x + enemy.size > player.x && enemy.x < player.x + player.width && enemy.y + enemy.size > player.y) {
+                    enemies.splice(eIdx, 1);
+                    lives--;
+                    playSound('miss');
+                    createExplosion(enemy.x, enemy.y, '💥', 10);
+
+                    if (lives <= 0) {
+                        triggerGameOver("You collided with enemy food!");
+                        return;
+                    }
+                    continue;
+                }
+
+                // Taco vs Enemy Collisions
+                for (let tIdx = tacos.length - 1; tIdx >= 0; tIdx--) {
+                    const t = tacos[tIdx];
+                    const dist = Math.hypot(t.x - (enemy.x + enemy.size / 2), t.y - (enemy.y + enemy.size / 2));
+
+                    if (dist < enemy.size / 2 + 14) {
+                        enemy.hp--;
+                        playSound('hit');
+                        tacos.splice(tIdx, 1);
+                        createExplosion(t.x, t.y);
+
+                        if (enemy.hp <= 0) {
+                            score += enemy.pts;
+                            roundKills++;
+                            createExplosion(enemy.x + enemy.size / 2, enemy.y + enemy.size / 2, enemy.emoji, 12);
+                            enemies.splice(eIdx, 1);
+
+                            // Check Progression for Rounds 1 & 2
+                            if (!curRound.isBossRound && roundKills >= curRound.targetKills) {
+                                if (currentRoundIdx + 1 < ROUNDS.length) {
+                                    startRound(currentRoundIdx + 1);
+                                } else {
+                                    triggerVictory();
+                                }
+                                return;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // Update Particle Effects
+            for (let pIdx = particles.length - 1; pIdx >= 0; pIdx--) {
+                const p = particles[pIdx];
+                p.x += p.dx;
+                p.y += p.dy;
+                p.life--;
+                p.alpha = p.life / 25;
+                if (p.life <= 0) particles.splice(pIdx, 1);
+            }
+        }
+
+        function triggerGameOver(reason) {
+            gameState = 'GAMEOVER';
+            playSound('gameover');
+            document.getElementById('go-round').innerText = `Round ${ROUNDS[currentRoundIdx].number}`;
+            document.getElementById('go-score').innerText = score;
+            document.getElementById('gameover-reason').innerText = reason;
+            document.getElementById('gameover-overlay').classList.remove('hidden');
+        }
+
+        function triggerVictory() {
+            gameState = 'VICTORY';
+            playSound('victory');
+            createConfetti();
+            document.getElementById('vic-score').innerText = score;
+            document.getElementById('victory-overlay').classList.remove('hidden');
+        }
+
+        // --- Render Loop ---
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Background Star/Particle Details
+            ctx.fillStyle = 'rgba(212, 175, 55, 0.15)';
+            for (let i = 0; i < 25; i++) {
+                const sx = (i * 53) % canvas.width;
+                const sy = (i * 91 + Date.now() * 0.02) % canvas.height;
+                ctx.fillRect(sx, sy, 2, 2);
+            }
+
+            // Draw Powerups
+            powerups.forEach(p => {
+                ctx.font = '28px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(p.emoji, p.x, p.y);
+            });
+
+            // Draw Tacos 🌮
+            ctx.font = '24px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            tacos.forEach(t => {
+                ctx.fillText('🌮', t.x, t.y);
+            });
+
+            // Draw Boss Attacks
+            bossAttacks.forEach(atk => {
+                ctx.font = `${atk.size}px Arial`;
+                ctx.fillText(atk.emoji, atk.x, atk.y);
+            });
+
+            // Draw Enemies
+            enemies.forEach(e => {
+                ctx.font = `${e.size}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(e.emoji, e.x + e.size / 2, e.y + e.size / 2);
+
+                // Draw Health Bar for multi-hit foods
+                if (e.maxHp > 1) {
+                    const barW = e.size;
+                    const barH = 4;
+                    const hpRatio = e.hp / e.maxHp;
+                    ctx.fillStyle = 'rgba(255, 0, 0, 0.7)';
+                    ctx.fillRect(e.x, e.y - 6, barW, barH);
+                    ctx.fillStyle = '#22c55e';
+                    ctx.fillRect(e.x, e.y - 6, barW * hpRatio, barH);
+                }
+            });
+
+            // Draw Boss (El Mega Burger)
+            if (boss) {
+                ctx.font = `${boss.height * 0.75}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(boss.emoji, boss.x + boss.width / 2, boss.y + boss.height / 2);
+
+                // Boss Name & Detailed HP Bar
+                ctx.font = 'bold 13px sans-serif';
+                ctx.fillStyle = '#facc15';
+                ctx.fillText(`${boss.name} (${boss.hp}/100 HP)`, boss.x + boss.width / 2, boss.y - 18);
+
+                const barW = boss.width;
+                const barH = 8;
+                const hpRatio = Math.max(0, boss.hp / boss.maxHp);
+                ctx.fillStyle = '#7f1d1d';
+                ctx.fillRect(boss.x, boss.y - 8, barW, barH);
+                ctx.fillStyle = '#22c55e';
+                ctx.fillRect(boss.x, boss.y - 8, barW * hpRatio, barH);
+                ctx.strokeStyle = '#facc15';
+                ctx.strokeRect(boss.x, boss.y - 8, barW, barH);
+            }
+
+            // Draw Player Avatar (Logo)
+            drawPlayerAvatar(player.x, player.y, player.width, player.height);
+
+            // Draw Particles / Explosions
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, p.alpha);
+                if (p.emoji) {
+                    ctx.font = '18px Arial';
+                    ctx.fillText(p.emoji, p.x, p.y);
+                } else {
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            });
+
+            // --- In-Game HUD ---
+            if (gameState === 'PLAYING') {
+                const curRound = ROUNDS[currentRoundIdx];
+
+                // HUD Bar Top Background
+                ctx.fillStyle = 'rgba(12, 3, 3, 0.85)';
+                ctx.fillRect(0, 0, canvas.width, 42);
+                ctx.strokeStyle = '#d4af37';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, 42);
+                ctx.lineTo(canvas.width, 42);
+                ctx.stroke();
+
+                ctx.font = 'bold 14px "Fredoka", sans-serif';
+                
+                // Round Info
+                ctx.fillStyle = '#facc15';
+                ctx.textAlign = 'left';
+                ctx.fillText(`Round: ${curRound.number}/3`, 12, 26);
+
+                // Score
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(`Score: ${score}`, 115, 26);
+
+                // Lives (Hearts)
+                ctx.fillStyle = '#ef4444';
+                ctx.textAlign = 'center';
+                const heartsStr = '❤️'.repeat(Math.max(0, lives)) + '🖤'.repeat(Math.max(0, MAX_LIVES - lives));
+                ctx.fillText(`Lives: ${heartsStr}`, canvas.width / 2, 26);
+
+                // Target Progress
+                ctx.textAlign = 'right';
+                if (curRound.isBossRound) {
+                    ctx.fillStyle = '#f43f5e';
+                    ctx.fillText(`BOSS: ${boss ? boss.hp : 0} HP`, canvas.width - 120, 26);
+                } else {
+                    ctx.fillStyle = '#4ade80';
+                    ctx.fillText(`Kills: ${roundKills} / ${curRound.targetKills}`, canvas.width - 120, 26);
+                }
+
+                // Triple Shot Status Indicator
+                if (player.tripleShot) {
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.fillText(`⚡ TRIPLE`, canvas.width - 15, 26);
+                }
+            }
+        }
+
+        // --- Main Game Animation Loop ---
+        function loop(timestamp) {
+            update(timestamp);
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
